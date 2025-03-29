@@ -4,7 +4,7 @@
 from src.data_loader import load_wikidata5m_text
 
 # Point to your file
-file_path = "/Users/Saxe/Desktop/GitHub/Text-Embeddings/Mini/data/wikidata5m_text.txt.nosync.txt"
+file_path = "/Users/Saxe/Desktop/GitHub/Data.nosync/wikidata5m_text.txt.nosync.txt"
 
 # from pathlib import Path
 

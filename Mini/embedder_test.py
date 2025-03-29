@@ -5,7 +5,7 @@ from src.data_loader import load_wikidata5m_text
 from src.embedder import embed_text
 from src.storage import save_embeddings
 
-file_path = "/Users/Saxe/Desktop/GitHub/Text-Embeddings/Mini/data/wikidata5m_text.txt.nosync.txt"
+file_path = "/Users/Saxe/Desktop/GitHub/Data.nosync/wikidata5m_text.txt.nosync.txt"
 output_path = "data/embedded_entities.json"
 
 # Load text data
