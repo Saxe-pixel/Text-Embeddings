@@ -2,7 +2,6 @@
 import sqlite3
 import json
 import re
-import sys
 from pathlib import Path
 
 # — adjust these paths to your repo layout —
@@ -30,7 +29,7 @@ def label_for(id_):
     return LABELS.get(id_, id_)
 
 def format_date(iso):
-    """Turn 'YYYY-MM-DD' into 'YYYY Mon D'."""
+    """Turn 'YYYY-MM-DD...' into 'YYYY Mon D'."""
     m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", iso)
     if not m:
         return iso
@@ -65,13 +64,15 @@ ATTRIBUTE_HEADINGS = {
     "place of death":        "place of death",
 }
 
-# regexes
-QID_URI_RE   = re.compile(r'^<http://www\.wikidata\.org/entity/(Q\d+)>$')
-BARE_QID_RE  = re.compile(r'^(Q\d+)$')
-XSD_DT_RE    = re.compile(r'^"([^"]+)"\^\^<http://www\.w3\.org/2001/XMLSchema#dateTime>$')
-UN_TYPED_DT  = re.compile(r'^"(\d{4}-\d{2}-\d{2})T')
+# regexes for matching
+QID_URI_RE = re.compile(r'^<http://www\.wikidata\.org/entity/(Q\d+)>$')
+BARE_QID_RE = re.compile(r'^(Q\d+)$')
+XSD_DT_RE  = re.compile(
+    r'^"([^"]+)"\^\^<http://www\.w3\.org/2001/XMLSchema#dateTime>$'
+)
 
 def fetch_triples(qid):
+    """Grab all (pid, value) pairs for one QID."""
     conn = sqlite3.connect(DB_PATH)
     cur  = conn.cursor()
     cur.execute("SELECT pid, value FROM properties WHERE qid=?", (qid,))
@@ -81,58 +82,65 @@ def fetch_triples(qid):
 
 def fmt_value(raw):
     """
-    1) bare QID → label
-    2) <…/QID> → label
-    3) typed xsd:dateTime → format_date
-    4) untyped ISO datetime → format_date
-    5) else strip quotes
+    - bare QID → its label
+    - <…/Q123>   → its label
+    - xsd:dateTime → formatted date
+    - otherwise   → strip surrounding quotes
     """
-    # bare QID?
-    if m:=BARE_QID_RE.match(raw):
-        return label_for(m.group(1))
-    # URI‐wrapped QID?
-    if m:=QID_URI_RE.match(raw):
-        return label_for(m.group(1))
-    # typed dateTime?
-    if m:=XSD_DT_RE.match(raw):
-        return format_date(m.group(1))
-    # untyped ISO datetime?
-    if m:=UN_TYPED_DT.match(raw):
-        return format_date(m.group(1))
-    # fallback
+    # 1) bare QID?
+    m0 = BARE_QID_RE.match(raw)
+    if m0:
+        return label_for(m0.group(1))
+    # 2) URI‐wrapped QID?
+    m1 = QID_URI_RE.match(raw)
+    if m1:
+        return label_for(m1.group(1))
+    # 3) dateTime?
+    m2 = XSD_DT_RE.match(raw)
+    if m2:
+        return format_date(m2.group(1))
+    # 4) fallback: unquote
     return raw.strip('"')
 
 def generate_description(qid):
     rows = fetch_triples(qid)
 
-    # gather headline bits
+    # build up headline parts
     name    = label_for(qid)
     desc    = None
     birth   = None
     death   = None
     aliases = []
 
-    props = {}  # {prop_label: [values…]}
+    # collect every other property into {label: [values…]}
+    props = {}
 
     for pid_uri, raw in rows:
+        # extract just the PID code
         code = pid_uri.strip("<>").rsplit("/",1)[-1]
         txt  = fmt_value(raw)
 
-        # description?
-        if pid_uri.endswith("/description>"):
-            desc = txt; continue
+        # description field
+        if code in ("P2047","P31") or pid_uri.endswith("/description>"):
+            # for schema.org/description, the pid_uri endswith "/description>"
+            if pid_uri.endswith("/description>") or code=="P2047":
+                desc = txt
+            continue
         # lifespan
-        if code=="P569": birth = txt; continue
-        if code=="P570": death = txt; continue
+        if code == "P569":
+            birth = txt; continue
+        if code == "P570":
+            death = txt; continue
         # aliases
         if code in ALIAS_PIDS:
-            aliases.append(txt); continue
+            aliases.append(txt)
+            continue
 
-        # everything else…
+        # everything else
         label = label_for(code)
         props.setdefault(label, []).append(txt)
 
-    # build first line
+    # headline
     parts = [name]
     if desc:
         parts.append(desc)
@@ -141,28 +149,20 @@ def generate_description(qid):
         parts[-1] += f" ({span})"
     if aliases:
         parts.append("also known as " + ", ".join(aliases))
+
     headline = "; ".join(parts).strip(" ;") + "."
 
-    # now each attribute on its own line
+    # now bullets
     lines = [headline, "Attributes include:"]
     for prop, vals in sorted(props.items(), key=lambda x: x[0].lower()):
-        key = prop.lower()
-        heading = ATTRIBUTE_HEADINGS.get(key, prop)
+        heading = ATTRIBUTE_HEADINGS.get(prop.lower(), prop)
         lines.append(f"- {heading}: " + ", ".join(vals))
 
     return "\n".join(lines)
 
-def test_labels():
-    for tid in ["Q42","Q14623683","P31","Q5"]:
-        print(f"{tid} → {label_for(tid)}")
-
 if __name__=="__main__":
-    if len(sys.argv)==2 and sys.argv[1]=="--test-labels":
-        test_labels()
-        sys.exit(0)
-
+    import sys
     if len(sys.argv)!=2:
-        print("Usage:\n  ./generate_text.py Q42\n  ./generate_text.py --test-labels")
+        print("Usage: generate_text.py Q42")
         sys.exit(1)
-
     print(generate_description(sys.argv[1]))
