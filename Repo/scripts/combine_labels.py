@@ -11,6 +11,7 @@ LABELS_JSON   = BASE / "label_map_full.json"
 MISSING_FILE  = BASE / "missing_label.txt"
 
 DATE_RE = re.compile(r'^"?(\d{4}-\d{2}-\d{2})')
+ID_RE = re.compile(r'^[PQ]\d+$')
 
 def load_labels():
     with open(LABELS_JSON, encoding="utf-8") as f:
@@ -43,6 +44,9 @@ def main():
             value_label TEXT
         )
     """)
+    # Indexes mirror those on the original 'properties' table
+    dst.execute('CREATE INDEX IF NOT EXISTS idx_pl_qid ON properties_labeled(qid);')
+    dst.execute('CREATE INDEX IF NOT EXISTS idx_pl_pid ON properties_labeled(pid);')
 
     for qid, pid, value in src.execute("SELECT qid, pid, value FROM properties"):
         qlabel = labels.get(qid)
@@ -54,7 +58,7 @@ def main():
 
         clean_val = clean_value(value)
         vlabel = None
-        if clean_val.startswith(("Q", "P")):
+        if ID_RE.match(clean_val):
             vlabel = labels.get(clean_val)
             if vlabel is None:
                 missing.add(clean_val)
