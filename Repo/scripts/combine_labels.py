@@ -7,7 +7,7 @@ from pathlib import Path
 BASE          = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
 DB_IN         = BASE / "wikidata.db"
 DB_OUT        = BASE / "wikidata_labeled.db"
-LABELS_JSON   = BASE / "label_map_full.json"
+LABELS_JSON   = BASE / "label_map_complete_decoded.json"
 MISSING_FILE  = BASE / "missing_label.txt"
 
 DATE_RE = re.compile(r'^"?(\d{4}-\d{2}-\d{2})')
