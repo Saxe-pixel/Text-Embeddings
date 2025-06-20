@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
-DB_PATH = BASE / "wikidata.db"
+DB_PATH = BASE / "wikidata_labeled.db"
 
 
 def decode_text(text: str) -> str:
