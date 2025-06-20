@@ -25,7 +25,7 @@ def main():
         decoded = decode_text(value)
         if decoded != value:
             cur.execute(
-                "UPDATE properties SET value=? WHERE rowid=?",
+                "UPDATE properties_labeled SET value=? WHERE rowid=?",
                 (decoded, rowid),
             )
             count += 1
