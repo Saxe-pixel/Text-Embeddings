@@ -15,7 +15,7 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    cur.execute("SELECT rowid, value FROM properties WHERE pid='description'")
+    cur.execute("SELECT rowid, value FROM properties_labeled WHERE pid='description'")
     rows = cur.fetchall()
     count = 0
 
