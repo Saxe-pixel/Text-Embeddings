@@ -9,7 +9,6 @@ DB_PATH = BASE / "wikidata_labeled.db"
 
 def decode_text(text: str) -> str:
     r"""Decode escape sequences like \uXXXX into real characters."""
-
     try:
         return text.encode("utf-8").decode("unicode_escape")
     except UnicodeDecodeError:
@@ -17,15 +16,26 @@ def decode_text(text: str) -> str:
         return text
 
 
+TARGET_PROPERTIES = {
+    "core#altLabel",
+    "core#prefLabel",
+    "rdf-schema#label",
+    "birth name",
+    "description",
+    "name",
+}
+
+
 def main(db_path: Path = DB_PATH):
-    """Decode escape sequences across all text columns."""
+    """Decode escape sequences for selected textual properties."""
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
-
+    placeholders = ",".join("?" for _ in TARGET_PROPERTIES)
     cur.execute(
-        "SELECT rowid, qid_label, property_label, value, value_label FROM properties_labeled"
+        f"SELECT rowid, qid_label, property_label, value, value_label FROM properties_labeled WHERE property_label IN ({placeholders})",
+        tuple(TARGET_PROPERTIES),
     )
     rows = cur.fetchall()
     count = 0
@@ -59,14 +69,12 @@ def main(db_path: Path = DB_PATH):
 
     conn.commit()
     conn.close()
-
     print(f"\u2705 Decoded {count} rows in {db_path}")
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
-        description="Decode escape sequences across the database"
+        description="Decode escape sequences in common label properties"
     )
     parser.add_argument(
         "--db",
