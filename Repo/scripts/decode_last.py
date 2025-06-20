@@ -19,11 +19,24 @@ TARGET_PROPERTIES = {
 
 
 def decode_text(text: str) -> str:
-    r"""Decode escape sequences like \uXXXX into real characters."""
-    try:
-        return text.encode("utf-8").decode("unicode_escape")
-    except UnicodeDecodeError:
-        return text
+    r"""Decode escape sequences like ``\uXXXX`` into characters.
+
+    The text may be nestedly escaped, so we repeatedly encode using
+    ``latin1`` and decode using ``unicode_escape`` until the result no
+    longer changes.  If decoding fails we simply return the latest value,
+    ensuring the original text is preserved when no decoding is required.
+    """
+
+    prev = text
+    while True:
+        try:
+            new = prev.encode("latin1").decode("unicode_escape")
+        except UnicodeDecodeError:
+            break
+        if new == prev:
+            break
+        prev = new
+    return prev
 
 
 def main(db_path: Path = DB_PATH) -> None:
