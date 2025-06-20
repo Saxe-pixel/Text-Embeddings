@@ -9,7 +9,11 @@ DB_PATH = BASE / "wikidata_labeled.db"
 
 def decode_text(text: str) -> str:
     r"""Decode escape sequences like \uXXXX into real characters."""
-    return text.encode("utf-8").decode("unicode_escape")
+    try:
+        return text.encode("utf-8").decode("unicode_escape")
+    except UnicodeDecodeError:
+        # Fall back to the original string if decoding fails
+        return text
 
 
 def main(db_path: Path = DB_PATH):
