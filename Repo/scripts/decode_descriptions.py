@@ -9,7 +9,7 @@ DB_PATH = BASE / "wikidata_labeled.db"
 
 def decode_text(text: str) -> str:
     r"""Decode escape sequences like \uXXXX into real characters."""
-    return text.encode("utf-8").decode("unicode_escape")
+
     try:
         return text.encode("utf-8").decode("unicode_escape")
     except UnicodeDecodeError:
@@ -17,8 +17,7 @@ def decode_text(text: str) -> str:
         return text
 
 
-def main():
-    conn = sqlite3.connect(DB_PATH)
+
 def main(db_path: Path = DB_PATH):
     """Decode escape sequences in the description property."""
 
@@ -42,12 +41,12 @@ def main(db_path: Path = DB_PATH):
 
     conn.commit()
     conn.close()
-    print(f"\u2705 Decoded {count} descriptions in {DB_PATH}")
+
     print(f"\u2705 Decoded {count} descriptions in {db_path}")
 
 
 if __name__ == "__main__":
-    main()
+
     parser = argparse.ArgumentParser(description="Decode description texts")
     parser.add_argument(
         "--db",
