@@ -4,7 +4,8 @@
 For each QID listed in a text file this script builds a short text of the
 form::
 
-    qid_label, description
+    qid | qid_label
+    description
     "Attributes include:"
     property_label: value_label
     ...
@@ -66,8 +67,11 @@ def build_text(qid: str, rows: list[tuple[str | None, str | None, str | None]]) 
             if prop_label and val_label:
                 attributes.append(f"{prop_label}: {val_label}")
 
-    headline = f"{qlabel}, {description}".strip().strip(",")
-    lines = [headline, "Attributes include:"]
+    headline = f"{qid} | {qlabel}".strip()
+    lines = [headline]
+    if description:
+        lines.append(description)
+    lines.append("Attributes include:")
     lines.extend(attributes)
     return "\n".join(lines)
 
