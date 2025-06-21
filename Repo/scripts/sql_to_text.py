@@ -4,7 +4,7 @@
 For each QID listed in a text file this script builds a short text of the
 form::
 
-    qid | qid_label, description
+    qid_label, description
     "Attributes include:"
     property_label: value_label
     ...
@@ -38,58 +38,35 @@ def has_column(cur: sqlite3.Cursor, table: str, column: str) -> bool:
     return any(row[1] == column for row in cur.fetchall())
 
 
-def fetch_rows(
-    cur: sqlite3.Cursor,
-    table: str,
-    qid: str,
-    use_value_label: bool,
-    use_qid_label: bool,
-) -> list[tuple[str | None, str | None, str | None, str | None]]:
-    """Fetch all rows for a QID returning label and raw value."""
-
+def fetch_rows(cur: sqlite3.Cursor, table: str, qid: str,
+               use_value_label: bool, use_qid_label: bool) -> list[tuple[str | None, str | None, str | None]]:
     if use_qid_label:
         qid_col = "qid_label"
     else:
         qid_col = "? AS qid_label"
-
-    if use_value_label:
-        val_label_col = "value_label"
-    else:
-        val_label_col = "NULL AS value_label"
-
+    value_col = "value_label" if use_value_label else "value"
     cur.execute(
-        f"SELECT {qid_col}, property_label, {val_label_col}, value FROM {table} WHERE qid=?",
-        (qid,) if use_qid_label else (qid, qid),
+        f"SELECT {qid_col}, property_label, {value_col} FROM {table} WHERE qid=?",
+        (qid,) if use_qid_label else (qid, qid)
     )
     return cur.fetchall()
 
 
-def build_text(
-    qid: str,
-    rows: list[tuple[str | None, str | None, str | None, str | None]],
-) -> str:
-    """Turn DB rows into a short descriptive text."""
-
-    qlabel: str | None = None
+def build_text(qid: str, rows: list[tuple[str | None, str | None, str | None]]) -> str:
+    qlabel = qid
     description = ""
     attributes: list[str] = []
 
-    for qid_label, prop_label, val_label, raw_value in rows:
-        if qid_label and qlabel is None:
-            # Some databases store entries like "Q1330|Q1330 | José Joaquín Prieto"
-            # in the ``qid_label`` column.  We only want the human readable
-            # portion which always appears after the final ``|`` character.
-            qlabel = qid_label.rsplit("|", 1)[-1].strip()
-        value = val_label if val_label else raw_value
-        if prop_label and prop_label.lower() == "description":
-            description = value or ""
+    for qid_label, prop_label, val_label in rows:
+        if qid_label and qlabel == qid:
+            qlabel = qid_label
+        if prop_label == "description":
+            description = val_label or ""
         else:
-            if prop_label and value:
-                attributes.append(f"{prop_label}: {value}")
+            if prop_label and val_label:
+                attributes.append(f"{prop_label}: {val_label}")
 
-    if qlabel is None:
-        qlabel = qid
-    headline = f"{qid} | {qlabel}, {description}".strip().strip(",")
+    headline = f"{qlabel}, {description}".strip().strip(",")
     lines = [headline, "Attributes include:"]
     lines.extend(attributes)
     return "\n".join(lines)
