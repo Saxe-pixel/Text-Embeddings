@@ -10,8 +10,8 @@ import argparse
 
 # scripts/ -> Repo/ -> Text-Embeddings/ -> WikiData.nosync/
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
-DEFAULT_DB = BASE / "wikidata_labeled.db"
-DEFAULT_OUT = Path("qid_with_bd.txt")
+DEFAULT_DB = BASE / "wikidata_labeled_wo.db"
+DEFAULT_OUT = BASE / ("qid_with_bd.txt")
 
 
 def extract_qids(db_path: Path, pid: str) -> list[str]:
