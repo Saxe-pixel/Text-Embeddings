@@ -4,7 +4,7 @@
 For each QID listed in a text file this script builds a short text of the
 form::
 
-    qid_label, description
+    qid | qid_label, description
     "Attributes include:"
     property_label: value_label
     ...
@@ -70,21 +70,25 @@ def build_text(
 ) -> str:
     """Turn DB rows into a short descriptive text."""
 
-    qlabel = qid
+    qlabel: str | None = None
     description = ""
     attributes: list[str] = []
 
     for qid_label, prop_label, val_label, raw_value in rows:
-        if qid_label and qlabel == qid:
-            qlabel = qid_label
+        if qid_label and qlabel is None:
+            # Some databases store "Q42|Douglas Adams" in the qid_label
+            # column.  In that case we only want the human-readable label.
+            qlabel = qid_label.split("|", 1)[-1]
         value = val_label if val_label else raw_value
-        if prop_label == "description":
+        if prop_label and prop_label.lower() == "description":
             description = value or ""
         else:
             if prop_label and value:
                 attributes.append(f"{prop_label}: {value}")
 
-    headline = f"{qlabel}, {description}".strip().strip(",")
+    if qlabel is None:
+        qlabel = qid
+    headline = f"{qid} | {qlabel}, {description}".strip().strip(",")
     lines = [headline, "Attributes include:"]
     lines.extend(attributes)
     return "\n".join(lines)
