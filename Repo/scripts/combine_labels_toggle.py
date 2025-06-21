@@ -14,7 +14,7 @@ FILTER_PID_P570         = False  # 4. Skip rows where pid == "P570"
 
 BASE          = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
 DB_IN         = BASE / "wikidata.db"
-DB_OUT        = BASE / "wikidata_labeled_wo.db"
+DB_OUT        = BASE / "wikidata_labeled_-missing.db"
 LABELS_JSON   = BASE / "label_map_complete_decoded.json"
 MISSING_FILE  = BASE / "missing_label.txt"
 
