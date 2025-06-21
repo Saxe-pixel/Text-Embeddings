@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove unwanted label rows from wikidata_labeled.db."""
+"""Remove unwanted rows from ``wikidata_labeled.db`` by ``pid``."""
 import sqlite3
 from pathlib import Path
 import argparse
@@ -19,11 +19,11 @@ TARGET_PROPERTIES = {
 
 
 def clean_database(db_path: Path = DB_PATH) -> None:
-    """Delete rows with unwanted property labels."""
+    """Delete rows based on unwanted ``pid`` values."""
     conn = sqlite3.connect(db_path)
     placeholders = ",".join("?" for _ in TARGET_PROPERTIES)
     cur = conn.execute(
-        f"DELETE FROM properties_labeled WHERE property_label IN ({placeholders})",
+        f"DELETE FROM properties_labeled WHERE pid IN ({placeholders})",
         tuple(TARGET_PROPERTIES),
     )
     conn.commit()
@@ -33,7 +33,7 @@ def clean_database(db_path: Path = DB_PATH) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Remove altLabel/prefLabel/name rows from wikidata_labeled.db"
+        description="Remove altLabel/prefLabel/name rows from ``wikidata_labeled.db`` via ``pid``"
     )
     parser.add_argument(
         "--db",
