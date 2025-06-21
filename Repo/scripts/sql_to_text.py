@@ -38,33 +38,51 @@ def has_column(cur: sqlite3.Cursor, table: str, column: str) -> bool:
     return any(row[1] == column for row in cur.fetchall())
 
 
-def fetch_rows(cur: sqlite3.Cursor, table: str, qid: str,
-               use_value_label: bool, use_qid_label: bool) -> list[tuple[str | None, str | None, str | None]]:
+def fetch_rows(
+    cur: sqlite3.Cursor,
+    table: str,
+    qid: str,
+    use_value_label: bool,
+    use_qid_label: bool,
+) -> list[tuple[str | None, str | None, str | None, str | None]]:
+    """Fetch all rows for a QID returning label and raw value."""
+
     if use_qid_label:
         qid_col = "qid_label"
     else:
         qid_col = "? AS qid_label"
-    value_col = "value_label" if use_value_label else "value"
+
+    if use_value_label:
+        val_label_col = "value_label"
+    else:
+        val_label_col = "NULL AS value_label"
+
     cur.execute(
-        f"SELECT {qid_col}, property_label, {value_col} FROM {table} WHERE qid=?",
-        (qid,) if use_qid_label else (qid, qid)
+        f"SELECT {qid_col}, property_label, {val_label_col}, value FROM {table} WHERE qid=?",
+        (qid,) if use_qid_label else (qid, qid),
     )
     return cur.fetchall()
 
 
-def build_text(qid: str, rows: list[tuple[str | None, str | None, str | None]]) -> str:
+def build_text(
+    qid: str,
+    rows: list[tuple[str | None, str | None, str | None, str | None]],
+) -> str:
+    """Turn DB rows into a short descriptive text."""
+
     qlabel = qid
     description = ""
     attributes: list[str] = []
 
-    for qid_label, prop_label, val_label in rows:
+    for qid_label, prop_label, val_label, raw_value in rows:
         if qid_label and qlabel == qid:
             qlabel = qid_label
+        value = val_label if val_label else raw_value
         if prop_label == "description":
-            description = val_label or ""
+            description = value or ""
         else:
-            if prop_label and val_label:
-                attributes.append(f"{prop_label}: {val_label}")
+            if prop_label and value:
+                attributes.append(f"{prop_label}: {value}")
 
     headline = f"{qlabel}, {description}".strip().strip(",")
     lines = [headline, "Attributes include:"]
