@@ -76,9 +76,10 @@ def build_text(
 
     for qid_label, prop_label, val_label, raw_value in rows:
         if qid_label and qlabel is None:
-            # Some databases store "Q42|Douglas Adams" in the qid_label
-            # column.  In that case we only want the human-readable label.
-            qlabel = qid_label.split("|", 1)[-1]
+            # Some databases store entries like "Q1330|Q1330 | José Joaquín Prieto"
+            # in the ``qid_label`` column.  We only want the human readable
+            # portion which always appears after the final ``|`` character.
+            qlabel = qid_label.rsplit("|", 1)[-1].strip()
         value = val_label if val_label else raw_value
         if prop_label and prop_label.lower() == "description":
             description = value or ""
