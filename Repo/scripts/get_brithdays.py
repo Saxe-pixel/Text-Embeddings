@@ -26,17 +26,26 @@ def load_qids(path: Path) -> list[str]:
         return [line.strip() for line in f if line.strip()]
 
 
-def fetch_birthdays(cur: sqlite3.Cursor, qids: list[str]) -> dict[str, str]:
+def fetch_birthdays(
+    cur: sqlite3.Cursor, qids: list[str], batch_size: int = 900
+) -> dict[str, str]:
     """Return a mapping of QID to birth date (value column)."""
+    result: dict[str, str] = {}
     if not qids:
-        return {}
+        return result
 
-    placeholders = ",".join("?" for _ in qids)
-    cur.execute(
-        f"SELECT qid, value FROM properties_labeled WHERE pid='P569' AND qid IN ({placeholders})",
-        qids,
-    )
-    return {qid: value for qid, value in cur.fetchall() if value is not None}
+    for i in range(0, len(qids), batch_size):
+        chunk = qids[i : i + batch_size]
+        placeholders = ",".join("?" for _ in chunk)
+        cur.execute(
+            f"SELECT qid, value FROM properties_labeled WHERE pid='P569' AND qid IN ({placeholders})",
+            chunk,
+        )
+        result.update(
+            {qid: value for qid, value in cur.fetchall() if value is not None}
+        )
+
+    return result
 
 
 def main(db_path: Path, qids_path: Path, out_path: Path) -> None:
