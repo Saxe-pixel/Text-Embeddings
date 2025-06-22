@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Extract birth dates for QIDs listed in ``qid_with_bd.txt``.
+"""Extract birth date values from ``wikidata_labeled_wo.db``.
 
-This script looks up QIDs in ``wikidata_labeled_wo.db`` and
-retrieves the raw value where ``pid`` equals ``P569``.
-The results are written as a JSON mapping ``{qid: value}``.
+The script queries the ``properties_labeled`` table for all rows
+where the property id (``pid``) equals ``P569``.  For each matching row
+the ``qid`` and raw ``value`` are collected and written to
+``birthdays.json`` as a simple ``{qid: value}`` mapping.
 """
 
 from __future__ import annotations
@@ -16,43 +17,24 @@ from pathlib import Path
 # scripts/ -> Repo/ -> Text-Embeddings/ -> WikiData.nosync/
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
 DEFAULT_DB = BASE / "wikidata_labeled_wo.db"
-DEFAULT_QIDS = BASE / "qid_with_bd.txt"
 DEFAULT_OUT = BASE / "birthdays.json"
 
-
-def load_qids(path: Path) -> list[str]:
-    """Return QIDs from the given text file."""
-    with open(path, "r", encoding="utf-8") as f:
-        return [line.strip() for line in f if line.strip()]
-
-
-def fetch_birthdays(
-    cur: sqlite3.Cursor, qids: list[str], batch_size: int = 900
-) -> dict[str, str]:
+def fetch_birthdays(cur: sqlite3.Cursor) -> dict[str, str]:
     """Return a mapping of QID to birth date (value column)."""
-    result: dict[str, str] = {}
-    if not qids:
-        return result
-
-    for i in range(0, len(qids), batch_size):
-        chunk = qids[i : i + batch_size]
-        placeholders = ",".join("?" for _ in chunk)
-        cur.execute(
-            f"SELECT qid, value FROM properties_labeled WHERE pid='P569' AND qid IN ({placeholders})",
-            chunk,
-        )
-        result.update(
-            {qid: value for qid, value in cur.fetchall() if value is not None}
-        )
-
-    return result
+    cur.execute(
+        "SELECT qid, value FROM properties_labeled WHERE pid='P569'"
+    )
+    return {
+        qid: value
+        for qid, value in cur.fetchall()
+        if qid is not None and value is not None
+    }
 
 
-def main(db_path: Path, qids_path: Path, out_path: Path) -> None:
-    qids = load_qids(qids_path)
+def main(db_path: Path, out_path: Path) -> None:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    data = fetch_birthdays(cur, qids)
+    data = fetch_birthdays(cur)
     conn.close()
 
     with open(out_path, "w", encoding="utf-8") as f:
@@ -61,9 +43,8 @@ def main(db_path: Path, qids_path: Path, out_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract birthday values for QIDs")
+    parser = argparse.ArgumentParser(description="Extract birthday values from wikidata_labeled_wo.db")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="Path to SQLite database")
-    parser.add_argument("--qids", type=Path, default=DEFAULT_QIDS, help="Text file with QIDs")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output JSON file")
     args = parser.parse_args()
-    main(args.db, args.qids, args.out)
+    main(args.db, args.out)
