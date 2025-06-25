@@ -23,8 +23,8 @@ from pathlib import Path
 # scripts/ -> Repo/ -> Text-Embeddings/ -> WikiData.nosync/
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
 DEFAULT_DB   = BASE / "wikidata_labeled_wo.db"
-DEFAULT_QIDS = BASE / "qid_with_bd_clean.txt"
-DEFAULT_OUT  = BASE / "qid_texts_wo_clean.db"
+DEFAULT_QIDS = BASE / "qids-test.txt"
+DEFAULT_OUT  = BASE / "qid_texts_wo_clean_test.db"
 TABLE_NAME   = "texts"
 
 
