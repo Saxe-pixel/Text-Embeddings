@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Embed texts and store them in an HDF5 file, with MPS/CPU auto‐selection, stable ordering,
-progress reporting, fp16 embeddings, and cache clearing to reduce memory."""
+"""Embed texts and store them in an HDF5 file, with MPS/CPU auto-selection,
+stable ordering, progress reporting, fp16 embeddings, and cache clearing to
+reduce memory. Supports stopping after a specified number of embeddings."""
 
 from __future__ import annotations
 
@@ -22,9 +23,11 @@ TABLE_NAME = "texts"
 EMB_DIM = 1024
 BATCH_SIZE = 8    # keep small to limit per-batch memory
 
+DEFAULT_MAX_EMBEDDINGS = 200000 # limit to avoid infinite runs (if set to None, no limit)
+
 # scripts/ -> Repo/ -> Text-Embeddings/ -> WikiData.nosync/
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
-DEFAULT_DB = BASE / "qid_texts_wo_clean.db"
+DEFAULT_DB = BASE / "qid_texts_wo_m_clean.db"
 DEFAULT_BD = BASE / "death_dates_clean.json"
 DEFAULT_OUT = BASE / "people_embeddings_death.h5"
 
@@ -74,12 +77,26 @@ def embed_batch(
     return emb
 
 
-def main(db_path: Path, death_path: Path, out_path: Path) -> None:
+def main(
+    db_path: Path,
+    death_path: Path,
+    out_path: Path,
+    max_embeddings: int | None = DEFAULT_MAX_EMBEDDINGS,
+) -> None:
+    """Embed texts and store them with associated dates of death.
+
+    ``max_embeddings`` sets how many entries to process before stopping. It
+    defaults to :data:`DEFAULT_MAX_EMBEDDINGS` (200k) so very large databases
+    don't run indefinitely.
+    """
     # connect to SQLite
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}")
-    n_rows = cur.fetchone()[0]
+    n_rows_total = cur.fetchone()[0]
+
+    # limit how many embeddings to compute if a maximum is provided
+    n_rows = min(n_rows_total, max_embeddings) if max_embeddings else n_rows_total
     cur.execute(f"SELECT MAX(LENGTH(qid)) FROM {TABLE_NAME}")
     max_qid_len = cur.fetchone()[0]
 
@@ -120,9 +137,13 @@ def main(db_path: Path, death_path: Path, out_path: Path) -> None:
 
         total_batches = math.ceil(n_rows / BATCH_SIZE)
         idx = 0
+        pbar = tqdm(total=n_rows, desc="Embedding entries")
 
-        for _ in tqdm(range(total_batches), desc="Embedding batches"):
-            rows = cur.fetchmany(BATCH_SIZE)
+        for _ in range(total_batches):
+            remaining = n_rows - idx
+            if remaining <= 0:
+                break
+            rows = cur.fetchmany(min(BATCH_SIZE, remaining))
             if not rows:
                 break
             qids = [r[0] for r in rows]
@@ -144,9 +165,12 @@ def main(db_path: Path, death_path: Path, out_path: Path) -> None:
             dod_ds[idx:end] = dod_strs
             dod_year_ds[idx:end] = years
             idx = end
+            pbar.update(len(rows))
 
             # flush to disk and free any HDF5 cache
             h5.flush()
+
+        pbar.close()
 
         print(f"\u2705 Wrote {idx} entries (with fp16 embeddings) to {out_path}")
 
@@ -158,5 +182,11 @@ if __name__ == "__main__":
     parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="Path to SQLite database")
     parser.add_argument("--deaths", type=Path, default=DEFAULT_BD, help="Path to dates of death JSON")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output HDF5 file")
+    parser.add_argument(
+        "--max-embeddings",
+        type=int,
+        default=DEFAULT_MAX_EMBEDDINGS,
+        help="Stop after embedding this many entries (default: 200000)",
+    )
     args = parser.parse_args()
-    main(args.db, args.deaths, args.out)
+    main(args.db, args.deaths, args.out, args.max_embeddings)
