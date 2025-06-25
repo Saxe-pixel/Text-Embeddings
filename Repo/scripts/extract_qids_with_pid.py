@@ -11,7 +11,7 @@ import argparse
 # scripts/ -> Repo/ -> Text-Embeddings/ -> WikiData.nosync/
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
 DEFAULT_DB = BASE / "wikidata_labeled_wo.db"
-DEFAULT_OUT = BASE / ("qid_with_bd.txt")
+DEFAULT_OUT = BASE / ("qid_with_death.txt")
 
 
 def extract_qids(db_path: Path, pid: str) -> list[str]:
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         description="Extract QIDs with a given PID from wikidata_labeled.db",
     )
     parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="Path to SQLite database")
-    parser.add_argument("--pid", default="P569", help="Property ID to search for")
+    parser.add_argument("--pid", default="P570", help="Property ID to search for")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output text file")
     args = parser.parse_args()
     main(args.db, args.pid, args.out)
