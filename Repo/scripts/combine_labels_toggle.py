@@ -9,12 +9,12 @@ from pathlib import Path
 FILTER_UNWANTED_PIDS    = True   # 1. Skip core#altLabel, core#prefLabel, etc.
 FILTER_MISSING_QID      = True   # 2. Skip rows where qid_label is missing
 FILTER_PID_P569         = False  # 3. Skip rows where pid == "P569"
-FILTER_PID_P570         = False  # 4. Skip rows where pid == "P570"
+FILTER_PID_P570         = True  # 4. Skip rows where pid == "P570"
 # ─────────────────────────────
 
 BASE          = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
 DB_IN         = BASE / "wikidata.db"
-DB_OUT        = BASE / "wikidata_labeled_-missing.db"
+DB_OUT        = BASE / "wikidata_labeled_-death.db"
 LABELS_JSON   = BASE / "label_map_complete_decoded.json"
 MISSING_FILE  = BASE / "missing_label.txt"
 
