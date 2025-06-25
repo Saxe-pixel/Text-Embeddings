@@ -73,10 +73,18 @@ def fetch_rows(
 
 
 def build_text(qid: str, rows: list[tuple[str | None, str, str | None, str | None, str]]) -> str:
+    """Assemble a short text from the DB rows for a single QID."""
+
     # Start with raw QID; replace with the first qid_label we see
     qlabel = qid
     description = ""
-    attributes: list[str] = []
+
+    # We want to collect values for the same property together in the
+    # order they first appear. ``dict`` preserves insertion order so we
+    # can rely on that (Python >=3.7).
+    from collections import OrderedDict
+
+    grouped: "OrderedDict[str, list[str]]" = OrderedDict()
 
     for qid_label, pid, prop_label, vlabel, raw_value in rows:
         if qid_label and qlabel == qid:
@@ -88,12 +96,18 @@ def build_text(qid: str, rows: list[tuple[str | None, str, str | None, str | Non
         # Determine which value to show
         val = vlabel if vlabel else raw_value
 
+        if not prop_name or not val:
+            continue
+
         # Capture the description separately
         if prop_name.lower() == "description":
             description = val or ""
+            continue
+
+        if prop_name not in grouped:
+            grouped[prop_name] = [val]
         else:
-            if prop_name and val:
-                attributes.append(f"{prop_name}: {val}")
+            grouped[prop_name].append(val)
 
     # Assemble lines:
     lines: list[str] = []
@@ -101,7 +115,8 @@ def build_text(qid: str, rows: list[tuple[str | None, str, str | None, str | Non
     if description:
         lines.append(description)
     lines.append('Attributes include:')
-    lines.extend(attributes)
+    for prop_name, vals in grouped.items():
+        lines.append(f"{prop_name}: {', '.join(vals)}")
     return "\n".join(lines)
 
 
