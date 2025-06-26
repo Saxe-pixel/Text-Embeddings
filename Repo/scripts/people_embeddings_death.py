@@ -21,9 +21,9 @@ from transformers import AutoTokenizer, AutoModel
 MODEL_NAME = "jinaai/jina-embeddings-v3"
 TABLE_NAME = "texts"
 EMB_DIM = 1024
-BATCH_SIZE = 8    # keep small to limit per-batch memory
+BATCH_SIZE = 4    # keep small to limit per-batch memory
 
-DEFAULT_MAX_EMBEDDINGS = 200000 # limit to avoid infinite runs (if set to None, no limit)
+DEFAULT_MAX_EMBEDDINGS = 10000 # limit to avoid infinite runs (if set to None, no limit)
 
 # scripts/ -> Repo/ -> Text-Embeddings/ -> WikiData.nosync/
 BASE = Path(__file__).resolve().parent.parent.parent / "WikiData.nosync"
